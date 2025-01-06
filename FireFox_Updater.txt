@@ -1,0 +1,50 @@
+# FireFox Browser updater
+# by Jonathan Thomas
+# Version 1.0
+# 10-01-2024
+# Check if Firefox is installed
+$firefoxPath = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' `
+    | Where-Object { $_.DisplayName -like '*Firefox*' }
+
+if ($null -eq $firefoxPath) {
+    # Firefox is not installed, exit the script
+    Write-Host "Firefox is not installed on this endpoint. Exiting."
+    # exit
+} else {
+    # Firefox is installed, check the version
+    $firefoxVersion = $firefoxPath.DisplayVersion
+    Write-Host "Found it! Firefox version $firefoxVersion is installed."
+
+    # Go online and check the latest version of Firefox
+    try {
+        $latestFirefoxVersionJson = Invoke-WebRequest -Uri "https://product-details.mozilla.org/1.0/firefox_versions.json" -UseBasicP
+        $latestFirefoxVersion = $latestFirefoxVersionJson.Content | ConvertFrom-Json
+        $latestVersion = $latestFirefoxVersion.LATEST_FIREFOX_VERSION
+
+        # Output the installed and latest Firefox version
+        Write-Host "Installed Firefox version: $firefoxVersion"
+        Write-Host "Latest Firefox version: $latestVersion"
+
+        # Compare versions
+        if ($firefoxVersion -eq $latestVersion) {
+            Write-Host "Endpoint Firefox is up to date."
+        } else {
+            Write-Host "There is a newer version of Firefox available: $latestVersion. Please update."
+            Write-Host "Downloading latest version."
+
+            # Download the latest version of Firefox
+            $installerPath = "C:\FirefoxInstaller.exe"
+            Start-BitsTransfer -Source "https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US" -Destination $installerPath
+
+            # Run the installer silently
+            Start-Process -FilePath $installerPath -ArgumentList "/silent", "/install" -Wait
+            Write-Host "Firefox has been updated to $latestVersion"
+
+            # Wait 10 seconds before attempting to delete the installer
+            Start-Sleep -Seconds 10
+            Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
+        }
+    } catch {
+        Write-Host "Unable to retrieve latest FireFox update info. Please check network connection."
+    }
+}
