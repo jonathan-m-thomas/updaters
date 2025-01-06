@@ -14,7 +14,7 @@ function Get-WebExVersionFromFile {
 
 # method to run the installer silently
 function Install-WebExSilently {
-    $installerPath = "C:\IT\WebexInstaller.msi"
+    $installerPath = "C:\dir\WebexInstaller.msi"
     
     if (Test-Path $installerPath) {
         Start-Process msiexec.exe -ArgumentList "/i `"$installerPath`" /quiet /norestart" -Wait
